@@ -2,16 +2,24 @@ const channelCount = Number(document.getElementById("channels").dataset.channelC
 const channelsRoot = document.getElementById("channels");
 const modeText = document.getElementById("modeText");
 
+const keypadModal = document.getElementById("keypadModal");
 const keypadTarget = document.getElementById("keypadTarget");
 const keypadGrid = document.getElementById("keypadGrid");
 const kpClear = document.getElementById("kpClear");
 const kpBack = document.getElementById("kpBack");
+const kpDone = document.getElementById("kpDone");
 
 let activeInput = null;
 
-function setActiveInput(input, title) {
+function openKeypad(input, title) {
   activeInput = input;
-  keypadTarget.textContent = `${title} 선택됨`;
+  keypadTarget.textContent = title;
+  keypadModal.classList.remove("hidden");
+}
+
+function closeKeypad() {
+  keypadModal.classList.add("hidden");
+  activeInput = null;
 }
 
 function fillKeypad() {
@@ -73,8 +81,8 @@ function createChannelCard(channel) {
   const minInput = card.querySelector(`#min-${channel}`);
   const secInput = card.querySelector(`#sec-${channel}`);
 
-  minInput.addEventListener("click", () => setActiveInput(minInput, `채널 ${channel} 분 입력`));
-  secInput.addEventListener("click", () => setActiveInput(secInput, `채널 ${channel} 초 입력`));
+  minInput.addEventListener("click", () => openKeypad(minInput, `채널 ${channel} 분 입력`));
+  secInput.addEventListener("click", () => openKeypad(secInput, `채널 ${channel} 초 입력`));
 
   card.querySelector(`#start-${channel}`).addEventListener("click", async () => {
     const minutes = Number(minInput.value || "0");
@@ -116,6 +124,11 @@ kpClear.addEventListener("click", () => {
 
 kpBack.addEventListener("click", () => {
   if (activeInput) activeInput.value = activeInput.value.slice(0, -1);
+});
+
+kpDone.addEventListener("click", closeKeypad);
+keypadModal.addEventListener("click", (e) => {
+  if (e.target === keypadModal) closeKeypad();
 });
 
 for (let ch = 1; ch <= channelCount; ch += 1) createChannelCard(ch);

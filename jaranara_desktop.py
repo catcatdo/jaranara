@@ -3,7 +3,6 @@ import os
 import subprocess
 import sys
 import time
-import webbrowser
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -27,13 +26,10 @@ def wait_server(timeout: float = 12.0) -> bool:
 
 
 def open_window() -> None:
-    try:
-        import webview  # type: ignore
+    import webview  # type: ignore
 
-        webview.create_window("자라나라 스마트팜", URL, width=1100, height=760)
-        webview.start()
-    except Exception:
-        webbrowser.open(URL)
+    webview.create_window("자라나라 스마트팜", URL, fullscreen=True)
+    webview.start()
 
 
 if __name__ == "__main__":
@@ -41,4 +37,10 @@ if __name__ == "__main__":
     if not wait_server():
         print("서버 응답이 없습니다. 'sudo systemctl restart jaranara.service' 후 다시 시도하세요.")
         sys.exit(1)
-    open_window()
+
+    try:
+        open_window()
+    except Exception as exc:
+        print("데스크톱 앱 실행 실패:", exc)
+        print("해결: ~/jaranara/install_jaranara.sh 를 다시 실행하세요.")
+        sys.exit(1)

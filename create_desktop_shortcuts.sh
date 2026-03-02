@@ -11,6 +11,7 @@ create_shortcut() {
   local target="$1"
   local name="$2"
   local exec_cmd="$3"
+  local use_terminal="${4:-true}"
   cat > "$target/$name.desktop" <<EOF
 [Desktop Entry]
 Version=1.0
@@ -18,8 +19,8 @@ Type=Application
 Name=$name
 Comment=Jaranara launcher
 Exec=$exec_cmd
-Terminal=true
-X-GNOME-Terminal=true
+Terminal=$use_terminal
+X-GNOME-Terminal=$use_terminal
 Path=$PROJECT_DIR
 Icon=utilities-terminal
 Categories=Utility;
@@ -27,16 +28,16 @@ EOF
   chmod +x "$target/$name.desktop"
 }
 
-create_shortcut "$DESKTOP_EN" "Jaranara Setup" "$PROJECT_DIR/install_jaranara.sh"
-create_shortcut "$DESKTOP_EN" "Jaranara UI" "bash -lc '$PROJECT_DIR/.venv/bin/python3 $PROJECT_DIR/jaranara_desktop.py'"
-create_shortcut "$DESKTOP_EN" "Jaranara Restart" "bash -lc 'sudo systemctl restart jaranara.service; systemctl status jaranara.service --no-pager'"
+create_shortcut "$DESKTOP_EN" "Jaranara Setup" "$PROJECT_DIR/install_jaranara.sh" "true"
+create_shortcut "$DESKTOP_EN" "Jaranara UI" "bash -lc '$PROJECT_DIR/.venv/bin/python3 $PROJECT_DIR/jaranara_desktop.py'" "false"
+create_shortcut "$DESKTOP_EN" "Jaranara Restart" "bash -lc 'sudo systemctl restart jaranara.service; systemctl status jaranara.service --no-pager'" "true"
 
-create_shortcut "$DESKTOP_KO" "Jaranara Setup" "$PROJECT_DIR/install_jaranara.sh"
-create_shortcut "$DESKTOP_KO" "Jaranara UI" "bash -lc '$PROJECT_DIR/.venv/bin/python3 $PROJECT_DIR/jaranara_desktop.py'"
-create_shortcut "$DESKTOP_KO" "Jaranara Restart" "bash -lc 'sudo systemctl restart jaranara.service; systemctl status jaranara.service --no-pager'"
+create_shortcut "$DESKTOP_KO" "Jaranara Setup" "$PROJECT_DIR/install_jaranara.sh" "true"
+create_shortcut "$DESKTOP_KO" "Jaranara UI" "bash -lc '$PROJECT_DIR/.venv/bin/python3 $PROJECT_DIR/jaranara_desktop.py'" "false"
+create_shortcut "$DESKTOP_KO" "Jaranara Restart" "bash -lc 'sudo systemctl restart jaranara.service; systemctl status jaranara.service --no-pager'" "true"
 
-create_shortcut "$HOME/.local/share/applications" "Jaranara Setup" "$PROJECT_DIR/install_jaranara.sh"
-create_shortcut "$HOME/.local/share/applications" "Jaranara UI" "bash -lc '$PROJECT_DIR/.venv/bin/python3 $PROJECT_DIR/jaranara_desktop.py'"
-create_shortcut "$HOME/.local/share/applications" "Jaranara Restart" "bash -lc 'sudo systemctl restart jaranara.service; systemctl status jaranara.service --no-pager'"
+create_shortcut "$HOME/.local/share/applications" "Jaranara Setup" "$PROJECT_DIR/install_jaranara.sh" "true"
+create_shortcut "$HOME/.local/share/applications" "Jaranara UI" "bash -lc '$PROJECT_DIR/.venv/bin/python3 $PROJECT_DIR/jaranara_desktop.py'" "false"
+create_shortcut "$HOME/.local/share/applications" "Jaranara Restart" "bash -lc 'sudo systemctl restart jaranara.service; systemctl status jaranara.service --no-pager'" "true"
 
 echo "바로가기 생성 완료"
