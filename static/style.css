@@ -1,0 +1,131 @@
+:root {
+  --bg: #f4f8ef;
+  --card: #ffffff;
+  --line: #d7dfc8;
+  --txt: #16220f;
+  --muted: #5f6d56;
+  --on: #2c8f50;
+  --off: #c84646;
+  --accent: #23688a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+  background: radial-gradient(circle at top right, #dae8c8, var(--bg) 42%);
+  color: var(--txt);
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+header h1 {
+  margin: 0 0 6px;
+  font-size: 1.9rem;
+}
+
+header p {
+  margin: 0 0 18px;
+  color: var(--muted);
+}
+
+.channels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 5px 16px rgba(26, 40, 8, 0.08);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.state {
+  font-weight: 700;
+}
+
+.state.on { color: var(--on); }
+.state.off { color: var(--off); }
+
+.btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: #e7ecd9;
+  color: var(--txt);
+  width: 100%;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn.off {
+  background: var(--off);
+  color: #fff;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 0.95rem;
+  background: #fbfdf7;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hidden { display: none; }
+
+.modal-card {
+  width: min(360px, 94vw);
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.keypad-grid button {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #f2f6ea;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.keypad-actions {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
