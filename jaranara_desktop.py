@@ -26,10 +26,19 @@ def wait_server(timeout: float = 12.0) -> bool:
 
 
 def open_window() -> None:
-    import webview  # type: ignore
+    from PyQt6.QtCore import QUrl
+    from PyQt6.QtGui import QKeySequence, QShortcut
+    from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtWebEngineWidgets import QWebEngineView
 
-    webview.create_window("자라나라 스마트팜", URL, fullscreen=True)
-    webview.start()
+    app = QApplication(sys.argv)
+    view = QWebEngineView()
+    view.setWindowTitle("자라나라 스마트팜")
+    view.setUrl(QUrl(URL))
+    QShortcut(QKeySequence("Esc"), view, activated=view.close)
+    view.page().windowCloseRequested.connect(view.close)
+    view.showMaximized()
+    app.exec()
 
 
 if __name__ == "__main__":
@@ -42,5 +51,5 @@ if __name__ == "__main__":
         open_window()
     except Exception as exc:
         print("데스크톱 앱 실행 실패:", exc)
-        print("해결: ~/jaranara/install_jaranara.sh 를 다시 실행하세요.")
+        print("해결: /home/catcatdo/jaranara/.venv/bin/pip install PyQt6 PyQt6-WebEngine")
         sys.exit(1)

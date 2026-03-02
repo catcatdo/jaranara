@@ -9,7 +9,7 @@
 - 시뮬레이션 모드(RPi.GPIO 미설치 환경)
 - 원클릭 설치 + 한글 locale 설정
 - systemd 자동 재시작(재부팅 후 자동 실행)
-- 브라우저 없이 실행되는 전체화면 데스크톱 앱(pywebview)
+- 브라우저 탭 없이 실행되는 전체화면 데스크톱 앱(PyQt6 WebEngine)
 
 ## 빠른 설치(클릭 방식)
 1. `Jaranara Setup.desktop` 실행

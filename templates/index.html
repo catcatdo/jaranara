@@ -3,15 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>자라나라 스마트팜</title>
+  <title>자라나라 Home</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <main class="app">
     <header class="topbar">
-      <h1>자라나라 스마트팜</h1>
-      <p id="modeText">상태 확인 중...</p>
+      <div>
+        <h1>자라나라 Home</h1>
+        <p id="modeText">홈 상태 불러오는 중...</p>
+      </div>
+      <div class="top-actions">
+        <button id="adminBtn" class="btn primary top-btn" type="button">관리자 로그인</button>
+        <button id="sensorBtn" class="btn top-btn hidden" type="button">센서 연결</button>
+        <button id="exitBtn" class="btn off top-btn" type="button">종료</button>
+      </div>
     </header>
+
+    <section class="climate-panel">
+      <article class="climate-card">
+        <div class="climate-label">온도</div>
+        <div id="tempValue" class="climate-value">--.-℃</div>
+      </article>
+      <article class="climate-card">
+        <div class="climate-label">습도</div>
+        <div id="humidValue" class="climate-value">--.-%</div>
+      </article>
+      <article class="climate-card">
+        <div class="climate-label">센서</div>
+        <div id="sensorState" class="climate-value">미연결</div>
+      </article>
+    </section>
+
+    <section id="wiringGuide" class="wiring-guide hidden">
+      <article class="wiring-card">
+        <h3>릴레이 배선</h3>
+        <p id="relayWiringText">불러오는 중...</p>
+      </article>
+      <article class="wiring-card">
+        <h3>센서 배선</h3>
+        <p id="sensorWiringText">불러오는 중...</p>
+      </article>
+    </section>
 
     <section id="channels" class="channels" data-channel-count="{{ channel_count }}"></section>
   </main>
@@ -20,11 +53,26 @@
     <div class="modal-card">
       <h2>숫자 키패드</h2>
       <p id="keypadTarget">입력할 분/초 칸을 선택하세요.</p>
+      <div id="keypadValue" class="keypad-value">--</div>
       <div class="keypad-grid" id="keypadGrid"></div>
       <div class="keypad-actions">
         <button id="kpClear" class="btn">지우기</button>
         <button id="kpBack" class="btn">한 글자 삭제</button>
         <button id="kpDone" class="btn primary">완료</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="adminModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>관리자 로그인</h2>
+      <p id="adminHelp">관리자 비밀번호(6자리 숫자)를 입력하세요.</p>
+      <div class="admin-form">
+        <input id="adminPass" class="input text-input" placeholder="비밀번호 6자리" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" />
+      </div>
+      <div class="keypad-actions">
+        <button id="adminCancel" class="btn">취소</button>
+        <button id="adminSubmit" class="btn primary">로그인</button>
       </div>
     </div>
   </div>
