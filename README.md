@@ -13,7 +13,7 @@
 ## 빠른 설치(클릭 방식)
 1. `Jaranara Setup.desktop` 실행
 2. 설치 스크립트가 패키지/locale/서비스를 자동 구성
-3. `Jaranara UI.desktop` 실행 후 웹 제어
+3. `Jaranara UI.desktop` 실행 후 웹 제어 (`http://127.0.0.1:5001`)
 
 ## 수동 설치
 ```bash
@@ -28,6 +28,9 @@ sudo systemctl status jaranara.service
 sudo systemctl restart jaranara.service
 sudo systemctl stop jaranara.service
 ```
+
+## 접속 주소
+`http://127.0.0.1:5001`
 
 ## GPIO 채널 핀 변경
 기본값은 `17,27,22,23` 입니다.

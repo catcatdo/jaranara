@@ -28,15 +28,15 @@ EOF
 }
 
 create_shortcut "$DESKTOP_EN" "Jaranara Setup" "$PROJECT_DIR/install_jaranara.sh"
-create_shortcut "$DESKTOP_EN" "Jaranara UI" "bash -lc 'xdg-open http://127.0.0.1:5000 || sensible-browser http://127.0.0.1:5000'"
+create_shortcut "$DESKTOP_EN" "Jaranara UI" "bash -lc 'xdg-open http://127.0.0.1:5001 || sensible-browser http://127.0.0.1:5001'"
 create_shortcut "$DESKTOP_EN" "Jaranara Restart" "bash -lc 'sudo systemctl restart jaranara.service; systemctl status jaranara.service --no-pager'"
 
 create_shortcut "$DESKTOP_KO" "Jaranara Setup" "$PROJECT_DIR/install_jaranara.sh"
-create_shortcut "$DESKTOP_KO" "Jaranara UI" "bash -lc 'xdg-open http://127.0.0.1:5000 || sensible-browser http://127.0.0.1:5000'"
+create_shortcut "$DESKTOP_KO" "Jaranara UI" "bash -lc 'xdg-open http://127.0.0.1:5001 || sensible-browser http://127.0.0.1:5001'"
 create_shortcut "$DESKTOP_KO" "Jaranara Restart" "bash -lc 'sudo systemctl restart jaranara.service; systemctl status jaranara.service --no-pager'"
 
 create_shortcut "$HOME/.local/share/applications" "Jaranara Setup" "$PROJECT_DIR/install_jaranara.sh"
-create_shortcut "$HOME/.local/share/applications" "Jaranara UI" "bash -lc 'xdg-open http://127.0.0.1:5000 || sensible-browser http://127.0.0.1:5000'"
+create_shortcut "$HOME/.local/share/applications" "Jaranara UI" "bash -lc 'xdg-open http://127.0.0.1:5001 || sensible-browser http://127.0.0.1:5001'"
 create_shortcut "$HOME/.local/share/applications" "Jaranara Restart" "bash -lc 'sudo systemctl restart jaranara.service; systemctl status jaranara.service --no-pager'"
 
 echo "바로가기 생성 완료"

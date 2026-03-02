@@ -33,6 +33,7 @@ WorkingDirectory=$PROJECT_DIR
 Environment=LANG=ko_KR.UTF-8
 Environment=LC_ALL=ko_KR.UTF-8
 Environment=RELAY_PINS=17,27,22,23
+Environment=PORT=5001
 ExecStart=$PROJECT_DIR/.venv/bin/python3 $PROJECT_DIR/app.py
 Restart=always
 RestartSec=2
@@ -49,5 +50,5 @@ echo "[6/7] 바탕화면 바로가기 생성"
 "$PROJECT_DIR/create_desktop_shortcuts.sh"
 
 echo "[7/7] 완료"
-echo "브라우저에서 http://127.0.0.1:5000 접속"
+echo "브라우저에서 http://127.0.0.1:5001 접속"
 echo "상태 확인: systemctl status jaranara.service"
