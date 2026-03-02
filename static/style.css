@@ -1,12 +1,13 @@
 :root {
-  --bg: #f4f8ef;
+  --bg1: #edf4e2;
+  --bg2: #dbe9cd;
   --card: #ffffff;
-  --line: #d7dfc8;
+  --line: #cfdbc0;
   --txt: #16220f;
-  --muted: #5f6d56;
-  --on: #2c8f50;
-  --off: #c84646;
-  --accent: #23688a;
+  --muted: #5d6b54;
+  --on: #228149;
+  --off: #c64040;
+  --accent: #245f7d;
 }
 
 * { box-sizing: border-box; }
@@ -14,59 +15,68 @@
 body {
   margin: 0;
   font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
-  background: radial-gradient(circle at top right, #dae8c8, var(--bg) 42%);
+  background: radial-gradient(circle at top right, var(--bg2), var(--bg1) 48%);
   color: var(--txt);
 }
 
 .app {
-  max-width: 960px;
+  max-width: 1220px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 20px;
 }
 
-header h1 {
-  margin: 0 0 6px;
-  font-size: 1.9rem;
+.topbar h1 {
+  margin: 0 0 4px;
+  font-size: 2rem;
 }
 
-header p {
-  margin: 0 0 18px;
+.topbar p {
+  margin: 0 0 14px;
   color: var(--muted);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 14px;
+  align-items: start;
 }
 
 .channels {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
-.card {
+.card,
+.keypad-panel {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 14px;
+  padding: 12px;
   box-shadow: 0 5px 16px rgba(26, 40, 8, 0.08);
+}
+
+.card h3 {
+  margin: 0 0 8px;
 }
 
 .row {
   display: flex;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
-.state {
-  font-weight: 700;
-}
-
+.state { font-weight: 700; }
 .state.on { color: var(--on); }
 .state.off { color: var(--off); }
 
 .btn {
   border: 0;
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 10px;
   cursor: pointer;
-  background: #e7ecd9;
+  background: #e7edd9;
   color: var(--txt);
   width: 100%;
 }
@@ -88,38 +98,32 @@ header p {
   padding: 8px;
   font-size: 0.95rem;
   background: #fbfdf7;
+  cursor: pointer;
 }
 
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.42);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.keypad-panel h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
 }
 
-.hidden { display: none; }
-
-.modal-card {
-  width: min(360px, 94vw);
-  background: #fff;
-  border-radius: 16px;
-  padding: 16px;
+.keypad-panel p {
+  margin: 0;
+  color: var(--muted);
+  min-height: 40px;
 }
 
 .keypad-grid {
+  margin-top: 10px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  margin-top: 10px;
 }
 
 .keypad-grid button {
   padding: 12px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: #f2f6ea;
+  background: #f0f5e7;
   cursor: pointer;
   font-size: 1rem;
 }
@@ -128,4 +132,15 @@ header p {
   margin-top: 10px;
   display: grid;
   gap: 8px;
+}
+
+@media (max-width: 960px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .keypad-panel {
+    position: sticky;
+    bottom: 8px;
+  }
 }

@@ -6,7 +6,7 @@ SERVICE_FILE="/etc/systemd/system/jaranara.service"
 
 echo "[1/7] 패키지 설치"
 sudo apt-get update
-sudo apt-get install -y python3 python3-venv python3-pip locales
+sudo apt-get install -y python3 python3-venv python3-pip python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 locales
 
 echo "[2/7] 한글 locale 활성화"
 if ! grep -q '^ko_KR.UTF-8 UTF-8' /etc/locale.gen; then
@@ -50,5 +50,6 @@ echo "[6/7] 바탕화면 바로가기 생성"
 "$PROJECT_DIR/create_desktop_shortcuts.sh"
 
 echo "[7/7] 완료"
-echo "브라우저에서 http://127.0.0.1:5001 접속"
+echo "앱 실행: $PROJECT_DIR/.venv/bin/python3 $PROJECT_DIR/jaranara_desktop.py"
+echo "웹 접속: http://127.0.0.1:5001"
 echo "상태 확인: systemctl status jaranara.service"
