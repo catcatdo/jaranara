@@ -391,6 +391,23 @@ def set_channel_name(channel: int):
     return jsonify({"ok": True, "channel": channel, "name": cleaned})
 
 
-if __name__ == "__main__":
+@app.get("/healthz")
+def healthz():
+    states = relay.get_states()
+    return jsonify(
+        {
+            "ok": True,
+            "simulation_mode": relay.simulation_mode,
+            "channels": len(states),
+            "active_channels": sum(1 for v in states.values() if v),
+        }
+    )
+
+
+def main() -> None:
     port = int(os.getenv("PORT", "5001"))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
+if __name__ == "__main__":
+    main()

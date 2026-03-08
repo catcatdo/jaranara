@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jaranara"
+version = "0.1.0"
+description = "Jaranara smart farm relay controller"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "catcatdo" }]
+dependencies = [
+  "Flask==3.0.3"
+]
+
+[project.scripts]
+jaranara-web = "app:main"
+
+[project.optional-dependencies]
+desktop = [
+  "PyQt6==6.10.2",
+  "PyQt6-WebEngine==6.10.0"
+]
+
+[tool.setuptools]
+py-modules = ["app", "jaranara_desktop"]
