@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>자라나라 기록 보기</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="app history-app">
+    <header class="topbar">
+      <div class="hero-copy">
+        <p class="eyebrow">Daily History</p>
+        <h1>온습도 · 가동 기록</h1>
+        <p class="hero-note">날짜별로 온도, 습도, 물펌프와 램프의 동작 시간을 확인합니다.</p>
+      </div>
+      <div class="top-actions">
+        <a href="/" class="btn subtle top-btn link-btn">제어 화면</a>
+      </div>
+    </header>
+
+    <section class="history-toolbar">
+      <label class="date-picker">
+        <span>조회 날짜</span>
+        <input id="historyDate" type="date" class="input text-input" />
+      </label>
+      <button id="loadHistoryBtn" class="btn primary">기록 불러오기</button>
+    </section>
+
+    <section class="history-summary">
+      <article class="climate-card">
+        <div class="climate-label">온도 평균</div>
+        <div id="avgTemp" class="climate-value">--.-℃</div>
+      </article>
+      <article class="climate-card">
+        <div class="climate-label">온도 범위</div>
+        <div id="tempRange" class="climate-value">--.- ~ --.-</div>
+      </article>
+      <article class="climate-card">
+        <div class="climate-label">습도 평균</div>
+        <div id="avgHumidity" class="climate-value">--.-%</div>
+      </article>
+      <article class="climate-card">
+        <div class="climate-label">습도 범위</div>
+        <div id="humidityRange" class="climate-value">--.- ~ --.-</div>
+      </article>
+    </section>
+
+    <section class="history-grid">
+      <article class="history-card">
+        <div class="section-head">
+          <h2>온도 변화</h2>
+          <p id="tempChartMeta">기록 없음</p>
+        </div>
+        <div id="tempChart" class="chart-box"></div>
+      </article>
+
+      <article class="history-card">
+        <div class="section-head">
+          <h2>습도 변화</h2>
+          <p id="humidityChartMeta">기록 없음</p>
+        </div>
+        <div id="humidityChart" class="chart-box"></div>
+      </article>
+    </section>
+
+    <section class="history-card">
+      <div class="section-head">
+        <h2>채널별 가동 시간</h2>
+        <p>날짜 기준으로 켜져 있었던 시간을 표시합니다.</p>
+      </div>
+      <div id="channelRuntime" class="runtime-list"></div>
+    </section>
+
+    <section class="history-card">
+      <div class="section-head">
+        <h2>채널별 동작 타임라인</h2>
+        <p>하루 24시간 중 언제 켜져 있었는지 막대로 보여줍니다.</p>
+      </div>
+      <div id="channelTimeline" class="timeline-list"></div>
+    </section>
+  </main>
+
+  <script src="/static/history.js"></script>
+</body>
+</html>

@@ -31,6 +31,7 @@ const repeatOnByChannel = {};
 const repeatOffByChannel = {};
 const repeatRemainingByChannel = {};
 const channelStateByChannel = {};
+const channelVisibleByChannel = {};
 const timeDrafts = loadTimeDrafts();
 
 function loadTimeDrafts() {
@@ -129,7 +130,12 @@ function renderChannelStatus(channel) {
   }
 
   const cardEl = stateEl?.closest(".card");
-  if (cardEl) cardEl.classList.toggle("live", Boolean(state || active));
+  if (cardEl) {
+    cardEl.classList.toggle("live", Boolean(state || active));
+    const visible = channelVisibleByChannel[channel] !== false;
+    cardEl.classList.toggle("hidden-card", !visible && !adminLoggedIn);
+    cardEl.classList.toggle("editor-hidden", !visible && adminLoggedIn);
+  }
 }
 
 function tickCountdown() {
@@ -183,6 +189,19 @@ function updateAdminButton() {
   }
 }
 
+function updateChannelVisibilityNotice(channel) {
+  const visible = channelVisibleByChannel[channel] !== false;
+  const noticeEl = document.getElementById(`visibility-note-${channel}`);
+  const toggleBtn = document.getElementById(`toggle-visibility-${channel}`);
+  if (noticeEl) {
+    noticeEl.textContent = visible ? "현재 화면에 표시 중" : "현재 메인 화면에서 숨김";
+  }
+  if (toggleBtn) {
+    toggleBtn.textContent = visible ? "이 채널 숨기기" : "이 채널 다시 보이기";
+    toggleBtn.classList.toggle("secondary-alert", visible);
+  }
+}
+
 function fillKeypad() {
   const values = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0"];
   values.forEach((v) => {
@@ -231,14 +250,18 @@ function createChannelCard(channel) {
       <input id="name-input-${channel}" class="input text-input" maxlength="20" placeholder="채널 이름(최대 20자)" />
       <button class="btn primary" id="save-name-${channel}">이름 저장</button>
     </div>
+    <div id="visibility-row-${channel}" class="editor-tools hidden">
+      <div id="visibility-note-${channel}" class="editor-note">현재 화면에 표시 중</div>
+      <button class="btn subtle" id="toggle-visibility-${channel}">이 채널 숨기기</button>
+    </div>
 
     <div class="row">
-      <button class="btn on-btn" id="on-${channel}">동작 ON</button>
-      <button class="btn off-btn" id="off-${channel}">정지 OFF</button>
+      <button class="btn on-btn" id="on-${channel}">바로 켜기</button>
+      <button class="btn off-btn" id="off-${channel}">바로 끄기</button>
     </div>
 
     <div class="time-block on">
-      <div class="time-title">동작 시간 (ON)</div>
+      <div class="time-title">켜짐 시간</div>
       <div class="row">
         <input id="on-min-${channel}" class="input" placeholder="분" readonly />
         <input id="on-sec-${channel}" class="input" placeholder="초" readonly />
@@ -246,7 +269,7 @@ function createChannelCard(channel) {
     </div>
 
     <div class="time-block off">
-      <div class="time-title">정지 시간 (OFF)</div>
+      <div class="time-title">꺼짐 시간</div>
       <div class="row">
         <input id="off-min-${channel}" class="input" placeholder="분" readonly />
         <input id="off-sec-${channel}" class="input" placeholder="초" readonly />
@@ -254,8 +277,8 @@ function createChannelCard(channel) {
     </div>
 
     <div class="row">
-      <button class="btn" id="start-${channel}">반복 시작</button>
-      <button class="btn" id="stop-${channel}">반복 정지</button>
+      <button class="btn" id="start-${channel}">자동 반복 시작</button>
+      <button class="btn" id="stop-${channel}">자동 반복 중지</button>
     </div>
   `;
 
@@ -340,6 +363,20 @@ function createChannelCard(channel) {
     await refresh();
   });
 
+  card.querySelector(`#toggle-visibility-${channel}`).addEventListener("click", async () => {
+    if (!adminLoggedIn) {
+      openAdminModal();
+      return;
+    }
+    const currentVisible = channelVisibleByChannel[channel] !== false;
+    const res = await api(`/api/channels/${channel}/visibility`, "POST", { visible: !currentVisible });
+    if (!res.ok) {
+      alert(res.error || "표시 설정 변경 실패");
+      return;
+    }
+    await refresh();
+  });
+
   channelsRoot.appendChild(card);
 }
 
@@ -364,6 +401,7 @@ async function refresh() {
 
   Object.entries(data.channels).forEach(([ch, state]) => {
     channelStateByChannel[ch] = Boolean(state);
+    channelVisibleByChannel[ch] = data?.visibility?.[ch] !== false;
     const repeatCfg = data?.repeat?.[ch];
     repeatOnByChannel[ch] = Number(repeatCfg?.on || 0);
     repeatOffByChannel[ch] = Number(repeatCfg?.off || 0);
@@ -373,10 +411,13 @@ async function refresh() {
     const nameEl = document.getElementById(`name-${ch}`);
     const inputEl = document.getElementById(`name-input-${ch}`);
     const editorEl = document.getElementById(`editor-${ch}`);
+    const visibilityRowEl = document.getElementById(`visibility-row-${ch}`);
     const currentName = data?.names?.[ch] || `채널 ${ch}`;
     if (nameEl) nameEl.textContent = currentName;
     if (inputEl && document.activeElement !== inputEl) inputEl.value = currentName;
     if (editorEl) editorEl.classList.toggle("hidden", !adminLoggedIn);
+    if (visibilityRowEl) visibilityRowEl.classList.toggle("hidden", !adminLoggedIn);
+    updateChannelVisibilityNotice(ch);
   });
 }
 
