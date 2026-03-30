@@ -1,10 +1,14 @@
 import atexit
 import json
+import math
 import os
 import secrets
+import sqlite3
 import threading
 import time
 from dataclasses import dataclass
+from datetime import date, datetime, time as dt_time, timedelta
+from typing import Callable
 
 from flask import Flask, jsonify, render_template, request, session
 
@@ -24,6 +28,9 @@ app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "057303")
 CHANNEL_NAMES_FILE = os.path.join(os.path.dirname(__file__), "channel_names.json")
+CHANNEL_VISIBILITY_FILE = os.path.join(os.path.dirname(__file__), "channel_visibility.json")
+HISTORY_DB_FILE = os.path.join(os.path.dirname(__file__), "history.db")
+HISTORY_SAMPLE_SECONDS = max(30, int(os.getenv("HISTORY_SAMPLE_SECONDS", "60")))
 
 
 @dataclass
@@ -43,6 +50,7 @@ class RelayController:
         self.repeaters: dict[int, RepeatTask] = {}
         self.next_toggle_at: dict[int, float] = {}
         self.simulation_mode = GPIO is None
+        self.state_change_callback: Callable[[int, bool, str], None] | None = None
 
         if not self.simulation_mode:
             GPIO.setmode(GPIO.BCM)
@@ -50,6 +58,9 @@ class RelayController:
             for pin in self.channel_pins:
                 GPIO.setup(pin, GPIO.OUT)
                 GPIO.output(pin, GPIO.HIGH if self.active_low else GPIO.LOW)
+
+    def set_state_change_callback(self, callback: Callable[[int, bool, str], None]) -> None:
+        self.state_change_callback = callback
 
     def _gpio_write(self, channel: int, state: bool) -> None:
         if self.simulation_mode:
@@ -60,17 +71,23 @@ class RelayController:
         else:
             GPIO.output(pin, GPIO.HIGH if state else GPIO.LOW)
 
-    def set_channel(self, channel: int, state: bool) -> None:
+    def set_channel(self, channel: int, state: bool, source: str = "manual") -> None:
+        changed = False
         with self.lock:
+            changed = self.states[channel] != state
             self.states[channel] = state
             self._gpio_write(channel, state)
+        if changed and self.state_change_callback:
+            self.state_change_callback(channel, state, source)
 
-    def toggle_channel(self, channel: int) -> bool:
+    def toggle_channel(self, channel: int, source: str = "repeat") -> bool:
         with self.lock:
             new_state = not self.states[channel]
             self.states[channel] = new_state
             self._gpio_write(channel, new_state)
-            return new_state
+        if self.state_change_callback:
+            self.state_change_callback(channel, new_state, source)
+        return new_state
 
     def get_states(self) -> dict[int, bool]:
         with self.lock:
@@ -107,7 +124,7 @@ class RelayController:
                     self.next_toggle_at[channel] = time.monotonic() + wait_seconds
                 if stop_event.wait(wait_seconds):
                     break
-                self.toggle_channel(channel)
+                self.toggle_channel(channel, source="repeat")
 
         thread = threading.Thread(target=_loop, daemon=True)
         thread.start()
@@ -150,10 +167,248 @@ def parse_channels(raw: str) -> list[int]:
     return pins
 
 
+def now_local() -> datetime:
+    return datetime.now().astimezone()
+
+
+def to_iso(dt: datetime) -> str:
+    return dt.astimezone().isoformat(timespec="seconds")
+
+
+class HistoryStore:
+    def __init__(self, path: str) -> None:
+        self.path = path
+        self.lock = threading.Lock()
+        self.conn = sqlite3.connect(self.path, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA synchronous=NORMAL")
+        self._init_db()
+
+    def _init_db(self) -> None:
+        with self.lock:
+            self.conn.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS sensor_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    recorded_at TEXT NOT NULL,
+                    temperature_c REAL,
+                    humidity REAL
+                );
+
+                CREATE TABLE IF NOT EXISTS channel_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    recorded_at TEXT NOT NULL,
+                    channel INTEGER NOT NULL,
+                    state INTEGER NOT NULL,
+                    source TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_sensor_logs_recorded_at
+                ON sensor_logs (recorded_at);
+
+                CREATE INDEX IF NOT EXISTS idx_channel_events_channel_recorded_at
+                ON channel_events (channel, recorded_at);
+                """
+            )
+            self.conn.commit()
+
+    def close(self) -> None:
+        with self.lock:
+            self.conn.close()
+
+    def log_sensor(self, temperature_c: float | None, humidity: float | None, recorded_at: datetime | None = None) -> None:
+        if temperature_c is None and humidity is None:
+            return
+        stamp = to_iso(recorded_at or now_local())
+        with self.lock:
+            self.conn.execute(
+                "INSERT INTO sensor_logs (recorded_at, temperature_c, humidity) VALUES (?, ?, ?)",
+                (stamp, temperature_c, humidity),
+            )
+            self.conn.commit()
+
+    def log_channel_event(self, channel: int, state: bool, source: str, recorded_at: datetime | None = None) -> None:
+        stamp = to_iso(recorded_at or now_local())
+        with self.lock:
+            self.conn.execute(
+                "INSERT INTO channel_events (recorded_at, channel, state, source) VALUES (?, ?, ?, ?)",
+                (stamp, channel, 1 if state else 0, source),
+            )
+            self.conn.commit()
+
+    def get_history(self, target_day: date) -> dict[str, object]:
+        start_dt = datetime.combine(target_day, dt_time.min).astimezone()
+        end_dt = start_dt + timedelta(days=1)
+        start_iso = to_iso(start_dt)
+        end_iso = to_iso(end_dt)
+
+        with self.lock:
+            sensor_rows = self.conn.execute(
+                """
+                SELECT recorded_at, temperature_c, humidity
+                FROM sensor_logs
+                WHERE recorded_at >= ? AND recorded_at < ?
+                ORDER BY recorded_at ASC
+                """,
+                (start_iso, end_iso),
+            ).fetchall()
+
+            event_rows = self.conn.execute(
+                """
+                SELECT recorded_at, channel, state, source
+                FROM channel_events
+                WHERE recorded_at >= ? AND recorded_at < ?
+                ORDER BY recorded_at ASC
+                """,
+                (start_iso, end_iso),
+            ).fetchall()
+
+        sensor_points = []
+        temperature_values: list[float] = []
+        humidity_values: list[float] = []
+        for row in sensor_rows:
+            recorded_at = datetime.fromisoformat(row["recorded_at"])
+            time_label = recorded_at.strftime("%H:%M")
+            point = {
+                "time": time_label,
+                "timestamp": row["recorded_at"],
+                "temperature_c": row["temperature_c"],
+                "humidity": row["humidity"],
+            }
+            sensor_points.append(point)
+            if row["temperature_c"] is not None:
+                temperature_values.append(float(row["temperature_c"]))
+            if row["humidity"] is not None:
+                humidity_values.append(float(row["humidity"]))
+
+        channel_history = []
+        for channel in range(1, len(CHANNEL_PINS) + 1):
+            channel_history.append(
+                self._build_channel_history(channel, start_dt, end_dt, event_rows)
+            )
+
+        return {
+            "date": target_day.isoformat(),
+            "sensor_points": sensor_points,
+            "sensor_summary": {
+                "sample_count": len(sensor_points),
+                "temperature_min": round(min(temperature_values), 1) if temperature_values else None,
+                "temperature_max": round(max(temperature_values), 1) if temperature_values else None,
+                "temperature_avg": round(sum(temperature_values) / len(temperature_values), 1) if temperature_values else None,
+                "humidity_min": round(min(humidity_values), 1) if humidity_values else None,
+                "humidity_max": round(max(humidity_values), 1) if humidity_values else None,
+                "humidity_avg": round(sum(humidity_values) / len(humidity_values), 1) if humidity_values else None,
+            },
+            "channels": channel_history,
+        }
+
+    def _build_channel_history(
+        self,
+        channel: int,
+        start_dt: datetime,
+        end_dt: datetime,
+        all_event_rows: list[sqlite3.Row],
+    ) -> dict[str, object]:
+        day_events = [row for row in all_event_rows if int(row["channel"]) == channel]
+        with self.lock:
+            previous = self.conn.execute(
+                """
+                SELECT state
+                FROM channel_events
+                WHERE channel = ? AND recorded_at < ?
+                ORDER BY recorded_at DESC
+                LIMIT 1
+                """,
+                (channel, to_iso(start_dt)),
+            ).fetchone()
+
+        current_state = bool(previous["state"]) if previous else False
+        cursor = start_dt
+        active_seconds = 0.0
+        segments: list[dict[str, object]] = []
+        events: list[dict[str, object]] = []
+
+        for row in day_events:
+            event_time = datetime.fromisoformat(row["recorded_at"])
+            if current_state:
+                active_seconds += max(0.0, (event_time - cursor).total_seconds())
+                segments.append(
+                    {
+                        "start_minute": int((cursor - start_dt).total_seconds() // 60),
+                        "end_minute": int((event_time - start_dt).total_seconds() // 60),
+                    }
+                )
+            events.append(
+                {
+                    "time": event_time.strftime("%H:%M"),
+                    "state": bool(row["state"]),
+                    "source": row["source"],
+                }
+            )
+            current_state = bool(row["state"])
+            cursor = event_time
+
+        if current_state:
+            active_seconds += max(0.0, (end_dt - cursor).total_seconds())
+            segments.append(
+                {
+                    "start_minute": int((cursor - start_dt).total_seconds() // 60),
+                    "end_minute": 24 * 60,
+                }
+            )
+
+        return {
+            "channel": channel,
+            "name": channel_names.get(channel, f"채널 {channel}"),
+            "visible": channel_visibility.get(channel, True),
+            "active_minutes": round(active_seconds / 60, 1),
+            "active_hours": round(active_seconds / 3600, 2),
+            "events": events,
+            "segments": segments,
+        }
+
+
 pins_env = os.getenv("RELAY_PINS", "17,27,22,23")
 CHANNEL_PINS = parse_channels(pins_env)
 relay = RelayController(CHANNEL_PINS, active_low=True)
 atexit.register(relay.cleanup)
+history_store = HistoryStore(HISTORY_DB_FILE)
+atexit.register(history_store.close)
+
+
+def handle_channel_state_change(channel: int, state: bool, source: str) -> None:
+    history_store.log_channel_event(channel, state, source)
+
+
+relay.set_state_change_callback(handle_channel_state_change)
+
+
+history_stop_event = threading.Event()
+
+
+def history_worker() -> None:
+    while not history_stop_event.is_set():
+        if climate.connected:
+            climate.read_once()
+            status_data = climate.get_status()
+            history_store.log_sensor(
+                status_data.get("temperature_c"),
+                status_data.get("humidity"),
+            )
+        history_stop_event.wait(HISTORY_SAMPLE_SECONDS)
+
+
+history_thread: threading.Thread | None = None
+
+
+def shutdown_history_worker() -> None:
+    history_stop_event.set()
+    if history_thread is not None:
+        history_thread.join(timeout=1.5)
+
+
+atexit.register(shutdown_history_worker)
 
 
 def error(message: str, code: int = 400):
@@ -194,6 +449,36 @@ def save_channel_names() -> None:
 channel_names = load_channel_names()
 
 
+def default_channel_visibility() -> dict[int, bool]:
+    return {idx + 1: True for idx in range(len(CHANNEL_PINS))}
+
+
+def load_channel_visibility() -> dict[int, bool]:
+    visibility = default_channel_visibility()
+    if not os.path.exists(CHANNEL_VISIBILITY_FILE):
+        return visibility
+    try:
+        with open(CHANNEL_VISIBILITY_FILE, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        if isinstance(raw, dict):
+            for key, value in raw.items():
+                ch = int(key)
+                if ch in visibility and isinstance(value, bool):
+                    visibility[ch] = value
+    except Exception:
+        return visibility
+    return visibility
+
+
+def save_channel_visibility() -> None:
+    payload = {str(ch): visible for ch, visible in channel_visibility.items()}
+    with open(CHANNEL_VISIBILITY_FILE, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+
+channel_visibility = load_channel_visibility()
+
+
 class ClimateSensor:
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -221,8 +506,11 @@ class ClimateSensor:
                 return False
             sensor_const = self._sensor_const()
             if sensor_const is None:
-                self.last_error = "Adafruit_DHT 라이브러리 없음"
-                return False
+                now_ts = time.time()
+                self.temperature_c = round(24 + math.sin(now_ts / 1800) * 2.4, 1)
+                self.humidity = round(58 + math.cos(now_ts / 2400) * 8.5, 1)
+                self.last_error = None if GPIO is None else "Adafruit_DHT 라이브러리 없음"
+                return GPIO is None
             humidity, temperature = Adafruit_DHT.read_retry(sensor_const, self.pin)
             if humidity is None or temperature is None:
                 self.last_error = "센서 읽기 실패"
@@ -251,11 +539,18 @@ class ClimateSensor:
 
 
 climate = ClimateSensor()
+history_thread = threading.Thread(target=history_worker, daemon=True)
+history_thread.start()
 
 
 @app.route("/")
 def index():
     return render_template("index.html", channel_count=len(CHANNEL_PINS))
+
+
+@app.get("/history")
+def history_page():
+    return render_template("history.html")
 
 
 @app.post("/api/admin/login")
@@ -292,6 +587,7 @@ def status():
             "repeat": relay.get_repeaters(),
             "repeat_remaining": relay.get_repeat_remaining(),
             "names": {str(ch): name for ch, name in channel_names.items()},
+            "visibility": {str(ch): visible for ch, visible in channel_visibility.items()},
             "climate": climate.get_status(),
             "hardware": {
                 "relay_pins": CHANNEL_PINS,
@@ -307,6 +603,17 @@ def status():
     )
 
 
+@app.get("/api/history")
+def history_data():
+    raw_date = request.args.get("date")
+    try:
+        target_day = date.fromisoformat(raw_date) if raw_date else now_local().date()
+    except ValueError:
+        return error("date must be YYYY-MM-DD")
+    data = history_store.get_history(target_day)
+    return jsonify({"ok": True, **data})
+
+
 @app.post("/api/sensor/connect")
 def connect_sensor():
     if not is_admin():
@@ -315,6 +622,7 @@ def connect_sensor():
     data = climate.get_status()
     if not ok:
         return jsonify({"ok": False, "error": data.get("error"), "climate": data}), 400
+    history_store.log_sensor(data.get("temperature_c"), data.get("humidity"))
     return jsonify({"ok": True, "climate": data})
 
 
@@ -389,6 +697,23 @@ def set_channel_name(channel: int):
     channel_names[channel] = cleaned
     save_channel_names()
     return jsonify({"ok": True, "channel": channel, "name": cleaned})
+
+
+@app.post("/api/channels/<int:channel>/visibility")
+def set_channel_visibility(channel: int):
+    if not is_admin():
+        return error("Admin login required", 401)
+    if channel not in relay.states:
+        return error("Invalid channel", 404)
+
+    payload = request.get_json(silent=True) or {}
+    visible = payload.get("visible")
+    if not isinstance(visible, bool):
+        return error("visible is required")
+
+    channel_visibility[channel] = visible
+    save_channel_visibility()
+    return jsonify({"ok": True, "channel": channel, "visible": visible})
 
 
 @app.get("/healthz")
